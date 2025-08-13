@@ -1,0 +1,40 @@
+{
+  "name": "sample-rag",
+  "version": "0.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "start": "tsc && tsc-alias && node --enable-source-maps dist/index.js",
+    "build": "tsc"
+  },
+  "author": {
+    "name": "Ta Minh Duc",
+    "email": "admin@duckonemorec.me",
+    "url": "https://duckonemorec.me"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@langchain/community": "^0.3.50",
+    "@langchain/core": "^0.3.70",
+    "@langchain/openai": "^0.6.7",
+    "@lmstudio/sdk": "^1.4.0",
+    "axios": "^1.11.0",
+    "cheerio": "^1.1.2",
+    "dotenv": "^17.2.1",
+    "faiss-node": "^0.5.1",
+    "inversify": "^7.7.1",
+    "langchain": "^0.3.30",
+    "moment": "^2.30.1",
+    "redis": "^5.8.0",
+    "reflect-metadata": "^0.2.2"
+  },
+  "gitHead": "4215a9a0c13b4e10b983e3523dae11a69058feb1",
+  "devDependencies": {
+    "@types/node": "^22.13.1",
+    "tsc-alias": "^1.8.16",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}
