@@ -1,9 +1,5 @@
-import {TotoRecordType} from "@apps/toto/types/toto-record.type";
-import {subscriberFunction} from "@apps/toto/processor/subscriber/toto-crawler";
-import publisherFunction from "@apps/toto/processor/publisher/toto-task-deliver";
 import {inject, injectable} from "inversify";
 import {LMSClient} from "@/clients/lms-client";
-import moment from "moment/moment";
 import {FaissStore} from "@langchain/community/vectorstores/faiss";
 import {Document} from "@langchain/core/documents";
 import {LocalEmbeddingProvider} from "@/ulti/local-embedding";
@@ -12,14 +8,30 @@ import * as path from "node:path";
 import * as process from "node:process";
 import * as fs from "node:fs";
 
+import Parser from 'rss-parser';
+import {YcomEntry} from "@apps/ycombinator/types/ycom-entry.type";
+import {CheerioWebBaseLoader} from "@langchain/community/document_loaders/web/cheerio";
+import {merge} from "lodash";
+
+
 @injectable()
-export class Toto {
-  storage: FaissStore = null
+export class Ycombinator {
+  private storage: FaissStore = null
+  private rssParser: Parser = null;
+  private webLoader: CheerioWebBaseLoader = null;
 
   constructor(
     @inject(LMSClient) public readonly client: LMSClient,
     @inject('LocalEmbeddingProvider') public readonly embeddingProvider: LocalEmbeddingProvider,
   ) {
+    this.rssParser = new Parser();
+  }
+
+  private getParser(): Parser {
+    if (this.rssParser === null) {
+      this.rssParser = new Parser();
+    }
+    return this.rssParser;
   }
 
   private getPersistencePath() {
@@ -29,42 +41,29 @@ export class Toto {
     )
   }
 
-  async retrieveTotoResult(limit: number = 30): Promise<TotoRecordType[]> {
-    const data: TotoRecordType[] = [];
-
-    const onData = (result: TotoRecordType) => {
-      data.push(result);
-    }
-
-    await subscriberFunction(onData).then((subscriber) => publisherFunction(limit));
-
-    return data;
+  async getRecentRssFeed(): Promise<YcomEntry[]> {
+    const data = await this.getParser().parseURL('https://news.ycombinator.com/rss') as { items: YcomEntry[] };
+    return data.items;
   }
 
-  prepareChunking(totoData: TotoRecordType[]) {
-    const SGDFormatter = new Intl.NumberFormat('en-SG', {
-      currency: "SGD",
-      useGrouping: true,
-      style: "currency",
+  async loadCommentChunksFromPost(entry: YcomEntry) {
+    const pageLoader = new CheerioWebBaseLoader(entry.comments, {
+      selector: 'div.commtext',
+      maxConcurrency: 5,
+      maxRetries: 3
+    });
+    const chunks = await pageLoader.load();
+
+    chunks.forEach((chunk) => {
+      chunk.metadata = chunk.metadata || {};
+      chunk.metadata = merge(chunk.metadata, entry, {topics: ["YCombinator", "Hacker News", "The Hacker News"]});
     });
 
-    return totoData.map(item => ({
-      text: [`[Toto Result] Draw: ${moment(item.DrawDate).format('YYYY-MM-DD')}`,
-        `Price: ${SGDFormatter.format(Number(item.FirstPrice))}`,
-        `Original Numbers: ${[item.Num1, item.Num2, item.Num3, item.Num4, item.Num5, item.Num6].join(', ')}`,
-        `Additional: ${item.AdditionalNum}`].join('|'),
-      metadata: {id: item.DrawId, timestamp: moment(item.DrawDate).unix()}
-    }));
+    return chunks;
   }
 
-  async saveToStore(data: TotoRecordType[]) {
+  async saveToStore(docs: Document[]) {
     const storage = await this.getStorage();
-    const chunks = this.prepareChunking(data);
-    const docs = chunks.map(chunk => ({
-      pageContent: chunk.text,
-      id: chunk.metadata.id,
-      metadata: chunk.metadata
-    } as Document));
     return storage.addDocuments(docs).finally(() => this.flushToDisk())
   }
 

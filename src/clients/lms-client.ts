@@ -12,8 +12,8 @@ export class LMSClient {
     return this.client;
   };
 
-  selectModel(model: string) {
-    return this.getClient().llm.model(model);
+  selectModel(model: string, contextLength = 4096) {
+    return this.getClient().llm.model(model, {config: {contextLength}});
   }
 
   async selectEmbeddingModel(model: string) {

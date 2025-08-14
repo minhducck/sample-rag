@@ -6,7 +6,9 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "start": "tsc && tsc-alias && node --enable-source-maps dist/index.js",
-    "build": "tsc"
+    "index:toto": "node --enable-source-maps dist/indexers/toto.indexer.js",
+    "index:ycom": "node --enable-source-maps dist/indexers/ycombinator.indexer.js",
+    "build": "tsc && tsc-alias"
   },
   "author": {
     "name": "Ta Minh Duc",
@@ -25,9 +27,11 @@
     "faiss-node": "^0.5.1",
     "inversify": "^7.7.1",
     "langchain": "^0.3.30",
+    "lodash": "^4.17.21",
     "moment": "^2.30.1",
     "redis": "^5.8.0",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "^0.2.2",
+    "rss-parser": "^3.13.0"
   },
   "gitHead": "4215a9a0c13b4e10b983e3523dae11a69058feb1",
   "devDependencies": {
