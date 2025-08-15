@@ -11,6 +11,7 @@ import {APPLICATION_CONFIGURATION} from "@/configuration/application.config";
 import * as path from "node:path";
 import * as process from "node:process";
 import * as fs from "node:fs";
+import {FaissStoreService} from "@/storages/faiss-store.service";
 
 @injectable()
 export class Toto {
@@ -18,16 +19,10 @@ export class Toto {
 
   constructor(
     @inject(LMSClient) public readonly client: LMSClient,
-    @inject('LocalEmbeddingProvider') public readonly embeddingProvider: LocalEmbeddingProvider,
+    @inject(FaissStoreService) public readonly persistence: FaissStoreService,
   ) {
   }
 
-  private getPersistencePath() {
-    return path.resolve(
-      process.cwd(),
-      APPLICATION_CONFIGURATION['FAISS_DATA']
-    )
-  }
 
   async retrieveTotoResult(limit: number = 30): Promise<TotoRecordType[]> {
     const data: TotoRecordType[] = [];
@@ -58,46 +53,12 @@ export class Toto {
   }
 
   async saveToStore(data: TotoRecordType[]) {
-    const storage = await this.getStorage();
     const chunks = this.prepareChunking(data);
     const docs = chunks.map(chunk => ({
       pageContent: chunk.text,
       id: chunk.metadata.id,
       metadata: chunk.metadata
     } as Document));
-    return storage.addDocuments(docs).finally(() => this.flushToDisk())
-  }
-
-  async flushToDisk() {
-    return this.getStorage().then(storage => storage.save(this.getPersistencePath()))
-  }
-
-  async findSimilar(query: string, k: number) {
-    const storage = await this.getStorage();
-    return storage.asRetriever(k).invoke(query);
-  }
-
-  private async getStorage() {
-    if (this.storage === null) {
-      if (fs.existsSync(this.getPersistencePath())) {
-        this.storage = await FaissStore.load(
-          this.getPersistencePath(),
-          await this.embeddingProvider(
-            {maxRetries: 3, maxConcurrency: 10, onFailedAttempt: console.error},
-            'text-embedding-nomic-embed-text-v1.5'
-          ),
-        );
-      } else {
-        this.storage = new FaissStore(
-          await this.embeddingProvider(
-            {maxRetries: 3, maxConcurrency: 10, onFailedAttempt: console.error},
-            'text-embedding-nomic-embed-text-v1.5'
-          ),
-          {}
-        );
-      }
-    }
-
-    return this.storage;
+    return this.persistence.addDocuments(docs)
   }
 }

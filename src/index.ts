@@ -1,11 +1,11 @@
 import * as process from "node:process";
 import {inject} from "inversify";
 import {Container} from "@/configuration/container";
-import {TotoGenerator} from "@/generators/toto.generator";
+import {ChatGenerator} from "@/generators/chat.generator";
 
 class MainProcess {
   constructor(
-    @inject(TotoGenerator) private totoGenerator: TotoGenerator
+    @inject(ChatGenerator) private totoGenerator: ChatGenerator
   ) {
   }
 
@@ -23,10 +23,10 @@ class MainProcess {
       }
     }, 300);
     console.log(`User asking about ${userPrompt}`);
-    showLoading = true;
+    // showLoading = true;
     const predict = await this.totoGenerator.prompt(userPrompt)
     showLoading = false;
-    process.stdout.write(predict.content);
+    process.stdout.write(predict);
     process.stdout.write("\n");
     process.stdout.write("Bye byte!\n")
     process.exit(0)

@@ -6,12 +6,15 @@ import {DocumentInterface} from "@langchain/core/documents";
 import {Chat, OngoingPrediction} from "@lmstudio/sdk";
 import {BaseMessage} from "@langchain/core/messages";
 import moment from "moment/moment";
+import * as process from "node:process";
+import {FaissStoreService} from "@/storages/faiss-store.service";
+import {APPLICATION_CONFIGURATION} from "@/configuration/application.config";
 
 @injectable("Singleton")
-export class TotoGenerator {
+export class ChatGenerator {
   constructor(
     @inject(LMSClient) public readonly client: LMSClient,
-    @inject(Toto) private toto: Toto
+    @inject(FaissStoreService) public readonly persistence: FaissStoreService,
   ) {
   }
 
@@ -22,6 +25,7 @@ export class TotoGenerator {
   async constructChatTemplate(userPrompt: string, docs: string[]) {
     const chatPromptTemplate = ChatPromptTemplate.fromMessages([
       ['system', `Today is {today_datetime}`],
+      ['system', `Current unix timestamp is {timestamp}`],
       ['system', `Context: {context}\nFrom Context answer the question. If don't know about the answer don't try to guess or generate the answer. Answer from context information only.`],
       ['system', `If today haven't index the data yet, Return to user to tell them index data please.`],
       ['user', `Question: {userInput}`],
@@ -29,9 +33,9 @@ export class TotoGenerator {
 
     return chatPromptTemplate.invoke({
       today_datetime: moment().format('YYYY-MM-DD'),
-      topic: "Y-Combinator",
       context: docs,
-      userInput: userPrompt
+      userInput: userPrompt,
+      timestamp: moment().unix()
     })
   }
 
@@ -46,8 +50,12 @@ export class TotoGenerator {
     }
   }
 
-  async prompt(userPrompt: string): Promise<OngoingPrediction> {
-    const similarDocs = await this.toto.findSimilar(userPrompt, 3);
+  async prompt(userPrompt: string): Promise<string> {
+    const similarDocs = await this.persistence.findSimilar(userPrompt, 3);
+
+    similarDocs.forEach((doc) => {
+      console.log(`[Content]: ${doc.pageContent}.\n\n[From]: ${doc.metadata.source}`)
+    });
 
     // Constructing Chat
     const chatPrompt = await this.constructChatTemplate(
@@ -64,7 +72,16 @@ export class TotoGenerator {
       });
     });
 
-    const model = await this.client.selectModel('microsoft/phi-4-reasoning-plus', 8000);
-    return model.respond(LMStudioChatPrompt) as OngoingPrediction;
+    const model = await this.client.selectModel(
+      APPLICATION_CONFIGURATION['LLM_MODEL_ID'],
+      +APPLICATION_CONFIGURATION['LLM_CONTEXT_LENGTH'] || 4096,
+    );
+
+    let response = '';
+    for await (const fragment of model.respond(LMStudioChatPrompt)) {
+      process.stdout.write(fragment.content);
+      response = fragment.content;
+    }
+    return response;
   }
 }

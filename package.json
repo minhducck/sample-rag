@@ -8,6 +8,8 @@
     "start": "tsc && tsc-alias && node --enable-source-maps dist/index.js",
     "index:toto": "node --enable-source-maps dist/indexers/toto.indexer.js",
     "index:ycom": "node --enable-source-maps dist/indexers/ycombinator.indexer.js",
+
+    "clear:store": "rm -rf var/*",
     "build": "tsc && tsc-alias"
   },
   "author": {
@@ -35,6 +37,7 @@
   },
   "gitHead": "4215a9a0c13b4e10b983e3523dae11a69058feb1",
   "devDependencies": {
+    "@types/lodash": "^4.17.20",
     "@types/node": "^22.13.1",
     "tsc-alias": "^1.8.16",
     "tsconfig-paths": "^4.2.0",

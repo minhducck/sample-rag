@@ -1,5 +1,6 @@
 import {LMStudioClient} from "@lmstudio/sdk";
 import {injectable} from "inversify";
+import moment from "moment";
 
 @injectable()
 export class LMSClient {
@@ -12,8 +13,14 @@ export class LMSClient {
     return this.client;
   };
 
-  selectModel(model: string, contextLength = 4096) {
-    return this.getClient().llm.model(model, {config: {contextLength}});
+  selectModel(model: string, contextLength: number = 4096) {
+    return this.getClient().llm.model(model, {
+      config: {
+        contextLength,
+        keepModelInMemory: true,
+        seed: moment().unix(),
+      }
+    });
   }
 
   async selectEmbeddingModel(model: string) {
