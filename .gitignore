@@ -4,3 +4,4 @@ var/
 !var/.gitkeep
 .idea/
 .env
+!var/pdfs/*
